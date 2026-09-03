@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabaseServer';
+import { nextDocNumber } from '@/lib/docNumber';
 
 export async function GET(req) {
   const { searchParams } = new URL(req.url);
@@ -7,17 +8,10 @@ export async function GET(req) {
   const prefix = type === 'receipt' ? 'RCP' : 'INV';
 
   const db = supabaseServer();
-  const { data, error } = await db.from('documents').select('doc_number');
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  let max = 0;
-  for (const row of data) {
-    const match = /(?:INV|RCP)-(\d+)/.exec(row.doc_number || '');
-    if (match) {
-      const n = parseInt(match[1], 10);
-      if (n > max) max = n;
-    }
+  try {
+    const docNumber = await nextDocNumber(db, prefix);
+    return NextResponse.json({ docNumber });
+  } catch (e) {
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
-  const next = String(max + 1).padStart(4, '0');
-  return NextResponse.json({ docNumber: `${prefix}-${next}` });
 }
