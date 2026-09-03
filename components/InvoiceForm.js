@@ -19,6 +19,7 @@ export default function InvoiceForm({ initialDoc }) {
   const [clientName, setClientName] = useState(initialDoc?.client_name || '');
   const [clientCourse, setClientCourse] = useState(initialDoc?.client_course || '');
   const [dateIssued, setDateIssued] = useState(initialDoc?.date_issued || todayStr());
+  const [fileLabel, setFileLabel] = useState(initialDoc?.file_label || '');
   const [items, setItems] = useState(
     initialDoc?.work_items?.length ? initialDoc.work_items : [emptyItem()]
   );
@@ -26,7 +27,7 @@ export default function InvoiceForm({ initialDoc }) {
 
   useEffect(() => {
     if (!isEdit) {
-      fetch('/api/next-number')
+      fetch('/api/next-number?type=invoice')
         .then((r) => r.json())
         .then((d) => setDocNumber(d.docNumber));
     }
@@ -58,6 +59,7 @@ export default function InvoiceForm({ initialDoc }) {
       client_name: clientName,
       client_course: clientCourse,
       date_issued: dateIssued,
+      file_label: fileLabel,
       work_items: items.map((i) => ({ ...i, amount: parseFloat(i.amount) || 0 })),
       total,
       status: initialDoc?.status || 'draft',
@@ -105,6 +107,8 @@ export default function InvoiceForm({ initialDoc }) {
         <input value={clientCourse} onChange={(e) => setClientCourse(e.target.value)} placeholder="Enter course / department" />
         <label>Date Issued</label>
         <input type="date" value={dateIssued} onChange={(e) => setDateIssued(e.target.value)} />
+        <label>Download File Name (optional)</label>
+        <input value={fileLabel} onChange={(e) => setFileLabel(e.target.value)} placeholder="Leave blank to use client name" />
       </div>
 
       <div className="card">

@@ -2,6 +2,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Nav from '@/components/Nav';
+import ConfirmDialog from '@/components/ConfirmDialog';
 import { generateInvoicePDF, generateReceiptPDF } from '@/lib/pdf';
 
 const STATUS_LABEL = { draft: 'Draft', sent: 'Sent', partial: 'Partial', paid: 'Paid' };
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const [renamingId, setRenamingId] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     load();
@@ -47,22 +49,22 @@ export default function HomePage() {
   }
 
   async function remove(doc) {
-    if (!confirm(`Delete ${doc.doc_number} (${doc.client_name})? This can't be undone.`)) return;
     const res = await fetch(`/api/documents/${doc.id}`, { method: 'DELETE' });
     if (res.ok) load();
     else alert('Delete failed.');
+    setDeleteTarget(null);
   }
 
   function startRename(doc) {
     setRenamingId(doc.id);
-    setRenameValue(doc.client_name);
+    setRenameValue(doc.file_label || doc.client_name);
   }
 
   async function saveRename(doc) {
     const res = await fetch(`/api/documents/${doc.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ client_name: renameValue }),
+      body: JSON.stringify({ file_label: renameValue }),
     });
     if (res.ok) {
       setRenamingId(null);
@@ -75,6 +77,16 @@ export default function HomePage() {
   return (
     <>
       <Nav />
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete this document?"
+        message={deleteTarget ? `${deleteTarget.doc_number} — ${deleteTarget.client_name}. This can't be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        danger
+        onConfirm={() => remove(deleteTarget)}
+        onCancel={() => setDeleteTarget(null)}
+      />
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 16px 60px' }}>
         <h1 style={{ fontSize: 20, margin: '0 0 4px' }}>Recent</h1>
         <p style={{ color: 'var(--gray)', fontSize: 13, margin: '0 0 18px' }}>
@@ -121,13 +133,21 @@ export default function HomePage() {
                 </div>
 
                 {renamingId === doc.id ? (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-                    <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} style={{ flex: 1 }} />
-                    <button className="btn btn-primary btn-sm" onClick={() => saveRename(doc)}>Save</button>
-                    <button className="btn btn-outline btn-sm" onClick={() => setRenamingId(null)}>Cancel</button>
+                  <div style={{ marginTop: 8 }}>
+                    <label style={{ marginTop: 0 }}>File name (doesn't change the name on the document itself)</label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <input value={renameValue} onChange={(e) => setRenameValue(e.target.value)} style={{ flex: 1 }} />
+                      <button className="btn btn-primary btn-sm" onClick={() => saveRename(doc)}>Save</button>
+                      <button className="btn btn-outline btn-sm" onClick={() => setRenamingId(null)}>Cancel</button>
+                    </div>
                   </div>
                 ) : (
-                  <div style={{ marginTop: 4, fontSize: 15 }}>{doc.client_name}</div>
+                  <div style={{ marginTop: 4, fontSize: 15 }}>
+                    {doc.client_name}
+                    {doc.file_label && doc.file_label !== doc.client_name && (
+                      <span style={{ fontSize: 12, color: 'var(--gray)', fontWeight: 400 }}> (saved as: {doc.file_label})</span>
+                    )}
+                  </div>
                 )}
 
                 {doc.client_course && <div style={{ fontSize: 12, color: 'var(--gray)' }}>{doc.client_course}</div>}
@@ -154,7 +174,7 @@ export default function HomePage() {
                   {renamingId !== doc.id && (
                     <button className="btn btn-outline btn-sm" onClick={() => startRename(doc)}>Rename</button>
                   )}
-                  <button className="btn btn-danger btn-sm" onClick={() => remove(doc)}>Delete</button>
+                  <button className="btn btn-danger btn-sm" onClick={() => setDeleteTarget(doc)}>Delete</button>
                 </>
               )}
             </div>

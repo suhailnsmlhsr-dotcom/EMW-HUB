@@ -42,38 +42,47 @@ label:first-of-type { margin-top: 0; }
 .card {
   background: #fff;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 20px;
   margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  transition: box-shadow 0.15s ease;
 }
 .card h2 {
-  font-size: 12px;
+  font-size: 11.5px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   color: var(--gray);
-  margin: 0 0 12px;
+  margin: 0 0 14px;
+  font-weight: 700;
 }
 .btn {
   padding: 12px 18px;
-  border-radius: 8px;
+  border-radius: 9px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   border: none;
   display: inline-block;
   text-align: center;
+  transition: transform 0.08s ease, opacity 0.15s ease, background 0.15s ease;
 }
+.btn:active { transform: scale(0.97); }
 .btn-primary { background: var(--ink); color: #fff; }
+.btn-primary:hover { opacity: 0.88; }
 .btn-outline { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+.btn-outline:hover { background: #f7f7f7; }
 .btn-danger { background: #fff; color: #c0392b; border: 1px solid #f0d0cc; }
-.btn-sm { padding: 7px 12px; font-size: 12px; }
+.btn-danger:hover { background: #fdf3f2; }
+.btn-sm { padding: 7px 12px; font-size: 12.5px; border-radius: 7px; }
 .badge {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10.5px;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 .badge-draft { background: #eee; color: #666; }
 .badge-sent { background: #e3edff; color: #2a5bd7; }

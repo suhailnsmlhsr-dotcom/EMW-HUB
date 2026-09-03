@@ -28,7 +28,7 @@ export default function Nav() {
     <div style={{ borderBottom: '1px solid var(--line)', background: '#fff' }}>
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ fontWeight: 700, fontSize: 18, color: 'var(--ink)', textDecoration: 'none' }}>
-          EMW HUB
+          EM-WORKS
         </Link>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {checked && authed && (

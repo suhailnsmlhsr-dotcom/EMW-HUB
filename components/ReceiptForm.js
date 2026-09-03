@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateReceiptPDF } from '@/lib/pdf';
+import ConfirmDialog from './ConfirmDialog';
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
@@ -21,6 +22,10 @@ export default function ReceiptForm({ initialDoc }) {
   const [items, setItems] = useState(initialDoc?.work_items || []);
   const [total, setTotal] = useState(initialDoc?.total || 0);
   const [linkedInvoiceNumber, setLinkedInvoiceNumber] = useState(initialDoc?.linked_invoice_number || '');
+  const [fileLabel, setFileLabel] = useState(initialDoc?.file_label || '');
+
+  const [discountAmount, setDiscountAmount] = useState(initialDoc?.discount_amount || '');
+  const [bonusAmount, setBonusAmount] = useState(initialDoc?.bonus_amount || '');
 
   const [paymentDate, setPaymentDate] = useState(initialDoc?.payment_date || todayStr());
   const [cashAmount, setCashAmount] = useState(initialDoc?.cash_amount || '');
@@ -28,9 +33,11 @@ export default function ReceiptForm({ initialDoc }) {
   const [bankAmount, setBankAmount] = useState(initialDoc?.bank_amount || '');
   const [saving, setSaving] = useState(false);
 
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   useEffect(() => {
     if (!isEdit) {
-      fetch('/api/next-number').then((r) => r.json()).then((d) => setDocNumber(d.docNumber));
+      fetch('/api/next-number?type=receipt').then((r) => r.json()).then((d) => setDocNumber(d.docNumber));
     }
     fetch('/api/documents')
       .then((r) => r.json())
@@ -46,11 +53,16 @@ export default function ReceiptForm({ initialDoc }) {
       setItems(inv.work_items || []);
       setTotal(inv.total || 0);
       setLinkedInvoiceNumber(inv.doc_number);
+      const match = /^(?:INV|RCP)-(\d+)$/.exec(inv.doc_number || '');
+      if (match) setDocNumber('RCP-' + match[1]);
     }
   }
 
+  const discount = parseFloat(discountAmount) || 0;
+  const bonus = parseFloat(bonusAmount) || 0;
+  const netPayable = Math.max(0, (parseFloat(total) || 0) - discount - bonus);
   const amountPaid = (parseFloat(cashAmount) || 0) + (parseFloat(upiAmount) || 0) + (parseFloat(bankAmount) || 0);
-  const balanceDue = Math.max(0, (parseFloat(total) || 0) - amountPaid);
+  const balanceDue = Math.max(0, netPayable - amountPaid);
 
   function paymentMethodLabel() {
     const parts = [];
@@ -81,8 +93,11 @@ export default function ReceiptForm({ initialDoc }) {
       client_name: clientName,
       client_course: clientCourse,
       date_issued: paymentDate,
+      file_label: fileLabel,
       work_items: items.map((i) => ({ ...i, amount: parseFloat(i.amount) || 0 })),
       total: parseFloat(total) || 0,
+      discount_amount: discount,
+      bonus_amount: bonus,
       amount_paid: amountPaid,
       balance_due: balanceDue,
       cash_amount: parseFloat(cashAmount) || 0,
@@ -94,22 +109,19 @@ export default function ReceiptForm({ initialDoc }) {
     };
   }
 
-  async function save(andPrint) {
+  function validate() {
     if (!clientName.trim()) {
       alert('Client name is required.');
-      return;
+      return false;
     }
     if (amountPaid <= 0) {
       alert('Enter at least one payment amount.');
-      return;
+      return false;
     }
-    if (mode === 'linked' && selectedInvoiceId) {
-      const ok = confirm(
-        `Mark invoice ${linkedInvoiceNumber} as ${balanceDue > 0 ? 'Partially Paid' : 'Paid'} and save this receipt?`
-      );
-      if (!ok) return;
-    }
+    return true;
+  }
 
+  async function doSave(andPrint) {
     setSaving(true);
     const payload = buildDoc();
     const url = isEdit ? `/api/documents/${initialDoc.id}` : '/api/documents';
@@ -131,8 +143,35 @@ export default function ReceiptForm({ initialDoc }) {
     router.refresh();
   }
 
+  function save(andPrint) {
+    if (!validate()) return;
+    if (mode === 'linked' && selectedInvoiceId) {
+      setPendingPrint(andPrint);
+      setConfirmOpen(true);
+      return;
+    }
+    doSave(andPrint);
+  }
+
+  const [pendingPrint, setPendingPrint] = useState(false);
+
+  function confirmAndSave() {
+    setConfirmOpen(false);
+    doSave(pendingPrint);
+  }
+
   return (
     <div>
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Update invoice status?"
+        message={`This will mark invoice ${linkedInvoiceNumber} as ${balanceDue > 0 ? 'Partially Paid' : 'Paid'} and save this receipt.`}
+        confirmLabel="Confirm & Save"
+        cancelLabel="Cancel"
+        onConfirm={confirmAndSave}
+        onCancel={() => setConfirmOpen(false)}
+      />
+
       {!isEdit && (
         <div className="card">
           <h2>Source</h2>
@@ -171,7 +210,7 @@ export default function ReceiptForm({ initialDoc }) {
 
       <div className="card">
         <h2>Receipt Number</h2>
-        <input value={docNumber} onChange={(e) => setDocNumber(e.target.value)} placeholder="INV-0001" />
+        <input value={docNumber} onChange={(e) => setDocNumber(e.target.value)} placeholder="RCP-0001" />
         {linkedInvoiceNumber && <p style={{ fontSize: 12, color: 'var(--gray)', marginTop: 6 }}>Against invoice: {linkedInvoiceNumber}</p>}
       </div>
 
@@ -183,6 +222,8 @@ export default function ReceiptForm({ initialDoc }) {
         <input value={clientCourse} onChange={(e) => setClientCourse(e.target.value)} placeholder="Enter course / department" />
         <label>Payment Date</label>
         <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
+        <label>Download File Name (optional)</label>
+        <input value={fileLabel} onChange={(e) => setFileLabel(e.target.value)} placeholder="Leave blank to use client name" />
       </div>
 
       <div className="card">
@@ -217,6 +258,19 @@ export default function ReceiptForm({ initialDoc }) {
       </div>
 
       <div className="card">
+        <h2>Discount / Bonus (optional)</h2>
+        <label>Discount (Rs.)</label>
+        <input type="number" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)} placeholder="0" />
+        <label>Bonus (Rs.)</label>
+        <input type="number" value={bonusAmount} onChange={(e) => setBonusAmount(e.target.value)} placeholder="0" />
+        {(discount > 0 || bonus > 0) && (
+          <div style={{ marginTop: 12, fontSize: 13, color: 'var(--gray)' }}>
+            Net Payable: <b style={{ color: 'var(--ink)', fontSize: 15 }}>Rs. {netPayable.toFixed(2)}</b>
+          </div>
+        )}
+      </div>
+
+      <div className="card">
         <h2>Payment Received</h2>
         <label>Cash (Rs.)</label>
         <input type="number" value={cashAmount} onChange={(e) => setCashAmount(e.target.value)} placeholder="0" />
@@ -245,4 +299,4 @@ export default function ReceiptForm({ initialDoc }) {
       </div>
     </div>
   );
-      }
+}
