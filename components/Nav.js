@@ -31,6 +31,7 @@ export default function Nav() {
           EM-WORKS
         </Link>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <Link href="/" className="btn btn-outline btn-sm">Home</Link>
           {checked && authed && (
             <>
               <Link href="/invoice/new" className="btn btn-outline btn-sm">+ Invoice</Link>
