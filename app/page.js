@@ -87,7 +87,7 @@ export default function HomePage() {
         onConfirm={() => remove(deleteTarget)}
         onCancel={() => setDeleteTarget(null)}
       />
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: '20px 16px 60px' }}>
+      <div className="page-container">
         <h1 style={{ fontSize: 20, margin: '0 0 4px' }}>Recent</h1>
         <p style={{ color: 'var(--gray)', fontSize: 13, margin: '0 0 18px' }}>
           {authed ? 'You can edit, rename, delete, and reprint.' : 'View and print. Log in to create or edit.'}
@@ -122,8 +122,9 @@ export default function HomePage() {
         {loading && <p style={{ color: 'var(--gray)' }}>Loading...</p>}
         {!loading && filtered.length === 0 && <p style={{ color: 'var(--gray)' }}>Nothing here yet.</p>}
 
+        <div className="recent-grid">
         {filtered.map((doc) => (
-          <div key={doc.id} className="card">
+          <div key={doc.id} className="card" style={{ marginBottom: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -180,6 +181,7 @@ export default function HomePage() {
             </div>
           </div>
         ))}
+        </div>
       </div>
     </>
   );
