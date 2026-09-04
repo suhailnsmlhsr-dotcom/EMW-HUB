@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Nav from '@/components/Nav';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import { generateInvoicePDF, generateReceiptPDF } from '@/lib/pdf';
+import { generateInvoicePNG, generateReceiptPNG } from '@/lib/image';
 
 const STATUS_LABEL = { draft: 'Draft', sent: 'Sent', partial: 'Partial', paid: 'Paid' };
 
@@ -46,6 +47,11 @@ export default function HomePage() {
   function reprint(doc) {
     if (doc.doc_type === 'invoice') generateInvoicePDF(doc);
     else generateReceiptPDF(doc);
+  }
+
+  function reprintPNG(doc) {
+    if (doc.doc_type === 'invoice') generateInvoicePNG(doc);
+    else generateReceiptPNG(doc);
   }
 
   async function remove(doc) {
@@ -169,6 +175,7 @@ export default function HomePage() {
 
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
               <button className="btn btn-outline btn-sm" onClick={() => reprint(doc)}>Print / Download</button>
+              <button className="btn btn-outline btn-sm" onClick={() => reprintPNG(doc)}>Download PNG</button>
               {authed && (
                 <>
                   <Link href={`/${doc.doc_type}/${doc.id}`} className="btn btn-outline btn-sm">Edit</Link>
