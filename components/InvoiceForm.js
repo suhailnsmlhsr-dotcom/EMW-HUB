@@ -24,6 +24,7 @@ export default function InvoiceForm({ initialDoc }) {
     initialDoc?.work_items?.length ? initialDoc.work_items : [emptyItem()]
   );
   const [saving, setSaving] = useState(false);
+  const [suggestions, setSuggestions] = useState({ clientNames: [], courses: [], descriptions: [] });
 
   useEffect(() => {
     if (!isEdit) {
@@ -31,6 +32,10 @@ export default function InvoiceForm({ initialDoc }) {
         .then((r) => r.json())
         .then((d) => setDocNumber(d.docNumber));
     }
+    fetch('/api/suggestions')
+      .then((r) => r.json())
+      .then((d) => setSuggestions(d))
+      .catch(() => {});
   }, [isEdit]);
 
   function updateItem(i, field, value) {
@@ -94,6 +99,16 @@ export default function InvoiceForm({ initialDoc }) {
 
   return (
     <div>
+      <datalist id="clientNameList">
+        {suggestions.clientNames.map((n) => <option key={n} value={n} />)}
+      </datalist>
+      <datalist id="courseList">
+        {suggestions.courses.map((c) => <option key={c} value={c} />)}
+      </datalist>
+      <datalist id="descriptionList">
+        {suggestions.descriptions.map((d) => <option key={d} value={d} />)}
+      </datalist>
+
       <div className="card">
         <h2>Invoice Number</h2>
         <input value={docNumber} onChange={(e) => setDocNumber(e.target.value)} placeholder="INV-0001" />
@@ -102,9 +117,9 @@ export default function InvoiceForm({ initialDoc }) {
       <div className="card">
         <h2>Billed To</h2>
         <label>Client Name</label>
-        <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter party name" />
+        <input list="clientNameList" autoComplete="off" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter party name" />
         <label>Course / Department</label>
-        <input value={clientCourse} onChange={(e) => setClientCourse(e.target.value)} placeholder="Enter course / department" />
+        <input list="courseList" autoComplete="off" value={clientCourse} onChange={(e) => setClientCourse(e.target.value)} placeholder="Enter course / department" />
         <label>Date Issued</label>
         <input type="date" value={dateIssued} onChange={(e) => setDateIssued(e.target.value)} />
         <label>Download File Name (optional)</label>
@@ -134,7 +149,7 @@ export default function InvoiceForm({ initialDoc }) {
               </div>
             </div>
             <label>Description</label>
-            <input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Enter description" />
+            <input list="descriptionList" autoComplete="off" value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} placeholder="Enter description" />
             <label>Amount (Rs.)</label>
             <input type="number" value={item.amount} onChange={(e) => updateItem(i, 'amount', e.target.value)} placeholder="Enter amount" />
           </div>

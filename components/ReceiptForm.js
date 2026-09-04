@@ -34,6 +34,7 @@ export default function ReceiptForm({ initialDoc }) {
   const [saving, setSaving] = useState(false);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [suggestions, setSuggestions] = useState({ clientNames: [], courses: [], descriptions: [] });
 
   useEffect(() => {
     if (!isEdit) {
@@ -42,6 +43,10 @@ export default function ReceiptForm({ initialDoc }) {
     fetch('/api/documents')
       .then((r) => r.json())
       .then((d) => setInvoices((d.documents || []).filter((doc) => doc.doc_type === 'invoice')));
+    fetch('/api/suggestions')
+      .then((r) => r.json())
+      .then((d) => setSuggestions(d))
+      .catch(() => {});
   }, [isEdit]);
 
   function selectInvoice(id) {
@@ -162,6 +167,16 @@ export default function ReceiptForm({ initialDoc }) {
 
   return (
     <div>
+      <datalist id="clientNameList">
+        {suggestions.clientNames.map((n) => <option key={n} value={n} />)}
+      </datalist>
+      <datalist id="courseList">
+        {suggestions.courses.map((c) => <option key={c} value={c} />)}
+      </datalist>
+      <datalist id="descriptionList">
+        {suggestions.descriptions.map((d) => <option key={d} value={d} />)}
+      </datalist>
+
       <ConfirmDialog
         open={confirmOpen}
         title="Update invoice status?"
@@ -217,9 +232,9 @@ export default function ReceiptForm({ initialDoc }) {
       <div className="card">
         <h2>Billed To</h2>
         <label>Client Name</label>
-        <input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter party name" />
+        <input list="clientNameList" autoComplete="off" value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Enter party name" />
         <label>Course / Department</label>
-        <input value={clientCourse} onChange={(e) => setClientCourse(e.target.value)} placeholder="Enter course / department" />
+        <input list="courseList" autoComplete="off" value={clientCourse} onChange={(e) => setClientCourse(e.target.value)} placeholder="Enter course / department" />
         <label>Payment Date</label>
         <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} />
         <label>Download File Name (optional)</label>
@@ -247,7 +262,7 @@ export default function ReceiptForm({ initialDoc }) {
               </div>
             </div>
             <label>Description</label>
-            <input value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} />
+            <input list="descriptionList" autoComplete="off" value={item.description} onChange={(e) => updateItem(i, 'description', e.target.value)} />
             <label>Amount (Rs.)</label>
             <input type="number" value={item.amount} onChange={(e) => updateItem(i, 'amount', e.target.value)} />
           </div>
