@@ -48,6 +48,27 @@ export default function InvoiceForm({ initialDoc }) {
     setItems(next);
   }
 
+  async function lookupWorkId(i) {
+    const workId = items[i]?.workId;
+    if (!workId) return;
+    try {
+      const res = await fetch(`/api/work-lookup?workId=${encodeURIComponent(workId)}`);
+      const data = await res.json();
+      if (data.found) {
+        const description = [data.workType, data.workDetails].filter(Boolean).join(', ');
+        setItems((prev) => {
+          const next = [...prev];
+          if (next[i] && next[i].workId === workId) {
+            next[i] = { ...next[i], description };
+          }
+          return next;
+        });
+      }
+    } catch (e) {
+      // silent fail — user can still type the description manually
+    }
+  }
+
   function addItem() {
     setItems([...items, emptyItem()]);
   }
@@ -141,7 +162,7 @@ export default function InvoiceForm({ initialDoc }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label>Work ID</label>
-                <input value={item.workId} onChange={(e) => updateItem(i, 'workId', e.target.value)} placeholder="Enter work number" />
+                <input value={item.workId} onChange={(e) => updateItem(i, 'workId', e.target.value)} onBlur={() => lookupWorkId(i)} placeholder="Enter work number" />
               </div>
               <div>
                 <label>Date Assigned</label>
