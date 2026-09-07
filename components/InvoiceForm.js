@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateInvoicePDF } from '@/lib/pdf';
 
@@ -25,6 +25,7 @@ export default function InvoiceForm({ initialDoc }) {
   );
   const [saving, setSaving] = useState(false);
   const [suggestions, setSuggestions] = useState({ clientNames: [], courses: [], descriptions: [] });
+  const lookupTimers = useRef({});
 
   useEffect(() => {
     if (!isEdit) {
@@ -46,10 +47,16 @@ export default function InvoiceForm({ initialDoc }) {
     }
     next[i] = { ...next[i], [field]: value };
     setItems(next);
+
+    if (field === 'workId') {
+      if (lookupTimers.current[i]) clearTimeout(lookupTimers.current[i]);
+      if (value) {
+        lookupTimers.current[i] = setTimeout(() => lookupWorkId(i, value), 400);
+      }
+    }
   }
 
-  async function lookupWorkId(i) {
-    const workId = items[i]?.workId;
+  async function lookupWorkId(i, workId) {
     if (!workId) return;
     try {
       const res = await fetch(`/api/work-lookup?workId=${encodeURIComponent(workId)}`);
@@ -59,13 +66,17 @@ export default function InvoiceForm({ initialDoc }) {
         setItems((prev) => {
           const next = [...prev];
           if (next[i] && next[i].workId === workId) {
-            next[i] = { ...next[i], description };
+            next[i] = {
+              ...next[i],
+              description,
+              amount: data.amount !== null && data.amount !== undefined ? String(data.amount) : next[i].amount,
+            };
           }
           return next;
         });
       }
     } catch (e) {
-      // silent fail — user can still type the description manually
+      // silent fail — user can still type description/amount manually
     }
   }
 
@@ -162,7 +173,7 @@ export default function InvoiceForm({ initialDoc }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label>Work ID</label>
-                <input value={item.workId} onChange={(e) => updateItem(i, 'workId', e.target.value)} onBlur={() => lookupWorkId(i)} placeholder="Enter work number" />
+                <input value={item.workId} onChange={(e) => updateItem(i, 'workId', e.target.value)} placeholder="Enter work number" />
               </div>
               <div>
                 <label>Date Assigned</label>

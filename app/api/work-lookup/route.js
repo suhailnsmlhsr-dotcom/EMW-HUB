@@ -11,7 +11,7 @@ export async function GET(req) {
   const db = supabaseServer();
   const { data, error } = await db
     .from('work_lookup')
-    .select('work_type, work_details')
+    .select('work_type, work_details, amount')
     .eq('work_id', workId)
     .maybeSingle();
 
@@ -22,5 +22,6 @@ export async function GET(req) {
     found: true,
     workType: data.work_type || '',
     workDetails: data.work_details || '',
+    amount: data.amount ?? null,
   });
 }
