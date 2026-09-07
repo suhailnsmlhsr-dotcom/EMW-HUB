@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { generateReceiptPDF } from '@/lib/pdf';
 import ConfirmDialog from './ConfirmDialog';
@@ -35,6 +35,7 @@ export default function ReceiptForm({ initialDoc }) {
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [suggestions, setSuggestions] = useState({ clientNames: [], courses: [], descriptions: [] });
+  const lookupTimers = useRef({});
 
   useEffect(() => {
     if (!isEdit) {
@@ -79,8 +80,43 @@ export default function ReceiptForm({ initialDoc }) {
 
   function updateItem(i, field, value) {
     const next = [...items];
+    if (field === 'workId') {
+      const digits = value.replace(/[^0-9]/g, '');
+      value = digits ? 'W-' + digits : '';
+    }
     next[i] = { ...next[i], [field]: value };
     setItems(next);
+
+    if (field === 'workId') {
+      if (lookupTimers.current[i]) clearTimeout(lookupTimers.current[i]);
+      if (value) {
+        lookupTimers.current[i] = setTimeout(() => lookupWorkId(i, value), 400);
+      }
+    }
+  }
+
+  async function lookupWorkId(i, workId) {
+    if (!workId) return;
+    try {
+      const res = await fetch(`/api/work-lookup?workId=${encodeURIComponent(workId)}`);
+      const data = await res.json();
+      if (data.found) {
+        const description = [data.workType, data.workDetails].filter(Boolean).join(', ');
+        setItems((prev) => {
+          const next = [...prev];
+          if (next[i] && next[i].workId === workId) {
+            next[i] = {
+              ...next[i],
+              description,
+              amount: data.amount !== null && data.amount !== undefined ? String(data.amount) : next[i].amount,
+            };
+          }
+          return next;
+        });
+      }
+    } catch (e) {
+      // silent fail — user can still type description/amount manually
+    }
   }
   function addItem() {
     setItems([...items, { workId: '', description: '', dateAssigned: '', amount: '' }]);
